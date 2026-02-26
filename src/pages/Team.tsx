@@ -53,7 +53,7 @@ const members: Member[] = [
   {
     name: "Vanessa Pinto",
     photo: vanessaImg,
-    title: "The Intern",
+    title: "The New Power Player",
     subtitle: "Newest member of the royal court. Full of potential, fresh energy, and a lot of questions.",
     icon: Sprout,
     tier: "intern",
