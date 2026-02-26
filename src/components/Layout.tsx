@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, CalendarDays, BarChart3, Menu, X } from "lucide-react";
+import AGRLogo from "@/components/AGRLogo";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
@@ -18,9 +19,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
         <div className="container flex h-14 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <span className="bg-primary text-primary-foreground rounded-lg px-2 py-0.5 text-sm">AGR</span>
-            <span className="hidden sm:inline">Party Committee</span>
+          <Link to="/" className="flex items-center gap-2 text-foreground">
+            <AGRLogo className="h-7" />
+            <span className="hidden sm:inline text-sm font-medium text-muted-foreground">Party Committee</span>
           </Link>
 
           {/* Desktop nav */}
