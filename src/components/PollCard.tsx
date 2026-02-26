@@ -4,8 +4,12 @@ import { CheckCircle2, Clock } from "lucide-react";
 import type { Poll } from "@/lib/mockData";
 
 export default function PollCard({ poll }: { poll: Poll }) {
-  const [voted, setVoted] = useState<string | null>(null);
-  const [localOptions, setLocalOptions] = useState(poll.options);
+  const storageKey = `poll-vote-${poll.id}`;
+  const saved = localStorage.getItem(storageKey);
+  const [voted, setVoted] = useState<string | null>(saved);
+  const [localOptions, setLocalOptions] = useState(() =>
+    saved ? poll.options.map((o) => (o.id === saved ? { ...o, votes: o.votes + 1 } : o)) : poll.options
+  );
   const totalVotes = localOptions.reduce((s, o) => s + o.votes, 0);
   const endsDate = new Date(poll.endsAt);
   const isOpen = endsDate > new Date();
@@ -13,6 +17,7 @@ export default function PollCard({ poll }: { poll: Poll }) {
   const handleVote = (optionId: string) => {
     if (voted) return;
     setVoted(optionId);
+    localStorage.setItem(storageKey, optionId);
     setLocalOptions((prev) =>
       prev.map((o) => (o.id === optionId ? { ...o, votes: o.votes + 1 } : o))
     );
