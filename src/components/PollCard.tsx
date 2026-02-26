@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 import type { Poll } from "@/lib/mockData";
 
 export default function PollCard({ poll }: { poll: Poll }) {
@@ -19,15 +19,19 @@ export default function PollCard({ poll }: { poll: Poll }) {
   };
 
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <h3 className="font-semibold text-base">{poll.question}</h3>
+    <div className="glass rounded-xl p-5">
+      <h3 className="font-semibold text-sm">{poll.question}</h3>
       <p className="text-xs text-muted-foreground mt-1">
-        {isOpen ? `Ends ${endsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Closed"} · {totalVotes + (voted ? 1 : 0)} votes
+        {isOpen
+          ? `Ends ${endsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+          : "Closed"}{" "}
+        · {totalVotes + (voted ? 1 : 0)} votes
       </p>
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-4 space-y-2">
         {localOptions.map((option) => {
-          const pct = totalVotes + (voted ? 1 : 0) > 0 ? (option.votes / (totalVotes + (voted ? 1 : 0))) * 100 : 0;
+          const currentTotal = totalVotes + (voted ? 1 : 0);
+          const pct = currentTotal > 0 ? (option.votes / currentTotal) * 100 : 0;
           const isSelected = voted === option.id;
 
           return (
@@ -35,25 +39,36 @@ export default function PollCard({ poll }: { poll: Poll }) {
               key={option.id}
               onClick={() => isOpen && handleVote(option.id)}
               disabled={!!voted || !isOpen}
-              className={`relative w-full text-left rounded-md border px-3 py-2 text-sm transition-colors overflow-hidden ${
+              className={`relative w-full text-left rounded-lg border px-3.5 py-2.5 text-sm transition-all duration-200 overflow-hidden ${
                 isSelected
-                  ? "border-primary ring-1 ring-primary/30"
+                  ? "border-primary/50 glow-primary"
                   : voted
-                  ? "border-border"
-                  : "border-border hover:border-primary/40 cursor-pointer"
+                  ? "border-border/50"
+                  : "border-border/50 hover:border-primary/30 cursor-pointer hover:bg-secondary/50"
               }`}
             >
               {voted && (
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className={`absolute inset-y-0 left-0 rounded-md ${isSelected ? "bg-primary/15" : "bg-muted"}`}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className={`absolute inset-y-0 left-0 rounded-lg ${
+                    isSelected
+                      ? "bg-gradient-to-r from-primary/20 to-primary/5"
+                      : "bg-secondary/50"
+                  }`}
                 />
               )}
               <span className="relative flex items-center justify-between">
-                <span>{option.label}</span>
-                {voted && <span className="text-xs font-medium text-muted-foreground">{Math.round(pct)}%</span>}
+                <span className="flex items-center gap-2">
+                  {isSelected && <CheckCircle2 size={14} className="text-primary" />}
+                  {option.label}
+                </span>
+                {voted && (
+                  <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                    {Math.round(pct)}%
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -61,7 +76,7 @@ export default function PollCard({ poll }: { poll: Poll }) {
       </div>
 
       {!voted && isOpen && (
-        <p className="text-xs text-muted-foreground mt-2">Click an option to vote</p>
+        <p className="text-xs text-muted-foreground/60 mt-3">Click an option to vote</p>
       )}
     </div>
   );
