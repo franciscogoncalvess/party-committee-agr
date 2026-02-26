@@ -2,9 +2,15 @@ import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Crown, Wrench, Megaphone, Sparkles, Sprout } from "lucide-react";
 
+import joseImg from "@/assets/team/jose.jpeg";
+import franciscoImg from "@/assets/team/francisco.png";
+import claudioImg from "@/assets/team/claudio.png";
+import astaImg from "@/assets/team/asta.png";
+import vanessaImg from "@/assets/team/vanessa.jpeg";
+
 interface Member {
   name: string;
-  emoji: string;
+  photo: string;
   title: string;
   subtitle: string;
   icon: LucideIcon;
@@ -14,7 +20,7 @@ interface Member {
 const members: Member[] = [
   {
     name: "José Mendes",
-    emoji: "👑",
+    photo: joseImg,
     title: "The President",
     subtitle: "Supreme leader of celebrations, keeper of the party budget, master of the mic drop.",
     icon: Crown,
@@ -22,7 +28,7 @@ const members: Member[] = [
   },
   {
     name: "Francisco Gonçalves",
-    emoji: "🛠",
+    photo: franciscoImg,
     title: 'Head of "I\'ll Handle It" Department',
     subtitle: "The multitasking problem-solver who somehow makes everything happen on time.",
     icon: Wrench,
@@ -30,7 +36,7 @@ const members: Member[] = [
   },
   {
     name: "Cláudio Bessa",
-    emoji: "📢",
+    photo: claudioImg,
     title: "Chief Communications Officer of Fun",
     subtitle: "The official voice, announcer, and hype manager of all party-related matters.",
     icon: Megaphone,
@@ -38,7 +44,7 @@ const members: Member[] = [
   },
   {
     name: "Asta",
-    emoji: "✨",
+    photo: astaImg,
     title: "The Vibes Consultant",
     subtitle: "Emotional support, calm energy, and the team's morale booster extraordinaire.",
     icon: Sparkles,
@@ -46,7 +52,7 @@ const members: Member[] = [
   },
   {
     name: "Vanessa Pinto",
-    emoji: "🌱",
+    photo: vanessaImg,
     title: "The Intern",
     subtitle: "Newest member of the royal court. Full of potential, fresh energy, and a lot of questions.",
     icon: Sprout,
@@ -89,18 +95,18 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
         )}
 
-        {/* Emoji avatar */}
+        {/* Photo avatar */}
         <div className="relative mx-auto mb-3">
           <div
-            className={`inline-flex items-center justify-center rounded-full ${
+            className={`overflow-hidden rounded-full ${
               isKing
-                ? "w-20 h-20 text-4xl bg-primary/10 ring-2 ring-primary/20"
+                ? "w-20 h-20 ring-2 ring-primary/20"
                 : isIntern
-                ? "w-14 h-14 text-2xl bg-accent/10 ring-2 ring-accent/15"
-                : "w-16 h-16 text-3xl bg-secondary ring-2 ring-border"
+                ? "w-14 h-14 ring-2 ring-accent/15"
+                : "w-16 h-16 ring-2 ring-border"
             }`}
           >
-            {member.emoji}
+            <img src={member.photo} alt={member.name} className="w-full h-full object-cover object-top" />
           </div>
           {isKing && (
             <motion.div
