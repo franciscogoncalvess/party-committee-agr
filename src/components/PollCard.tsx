@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import type { Poll } from "@/lib/mockData";
 
 export default function PollCard({ poll }: { poll: Poll }) {
@@ -18,19 +18,25 @@ export default function PollCard({ poll }: { poll: Poll }) {
     );
   };
 
+  const currentTotal = totalVotes + (voted ? 1 : 0);
+
   return (
-    <div className="glass rounded-xl p-5">
-      <h3 className="font-semibold text-sm">{poll.question}</h3>
-      <p className="text-xs text-muted-foreground mt-1">
-        {isOpen
-          ? `Ends ${endsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-          : "Closed"}{" "}
-        · {totalVotes + (voted ? 1 : 0)} votes
-      </p>
+    <div className="card-elevated p-5">
+      <h3 className="font-semibold text-[15px]">{poll.question}</h3>
+      <div className="flex items-center gap-2 mt-1.5">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+          isOpen ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+        }`}>
+          <Clock size={10} />
+          {isOpen ? `Ends ${endsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Closed"}
+        </span>
+        <span className="text-[11px] text-muted-foreground/60 font-medium">
+          {currentTotal} vote{currentTotal !== 1 ? "s" : ""}
+        </span>
+      </div>
 
       <div className="mt-4 space-y-2">
         {localOptions.map((option) => {
-          const currentTotal = totalVotes + (voted ? 1 : 0);
           const pct = currentTotal > 0 ? (option.votes / currentTotal) * 100 : 0;
           const isSelected = voted === option.id;
 
@@ -39,23 +45,23 @@ export default function PollCard({ poll }: { poll: Poll }) {
               key={option.id}
               onClick={() => isOpen && handleVote(option.id)}
               disabled={!!voted || !isOpen}
-              className={`relative w-full text-left rounded-lg border px-3.5 py-2.5 text-sm transition-all duration-200 overflow-hidden ${
+              className={`group relative w-full text-left rounded-xl border px-4 py-3 text-[13px] font-medium transition-all duration-200 overflow-hidden ${
                 isSelected
-                  ? "border-primary/50 glow-primary"
+                  ? "border-primary/40 bg-primary/5"
                   : voted
-                  ? "border-border/50"
-                  : "border-border/50 hover:border-primary/30 cursor-pointer hover:bg-secondary/50"
+                  ? "border-border/60 bg-card"
+                  : "border-border/60 bg-card hover:border-primary/25 hover:bg-primary/[0.02] cursor-pointer"
               }`}
             >
               {voted && (
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className={`absolute inset-y-0 left-0 rounded-lg ${
+                  transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+                  className={`absolute inset-y-0 left-0 rounded-xl ${
                     isSelected
-                      ? "bg-gradient-to-r from-primary/20 to-primary/5"
-                      : "bg-secondary/50"
+                      ? "bg-gradient-to-r from-primary/12 to-transparent"
+                      : "bg-muted/40"
                   }`}
                 />
               )}
@@ -65,7 +71,7 @@ export default function PollCard({ poll }: { poll: Poll }) {
                   {option.label}
                 </span>
                 {voted && (
-                  <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                  <span className={`text-[12px] font-bold tabular-nums ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
                     {Math.round(pct)}%
                   </span>
                 )}
@@ -76,7 +82,7 @@ export default function PollCard({ poll }: { poll: Poll }) {
       </div>
 
       {!voted && isOpen && (
-        <p className="text-xs text-muted-foreground/60 mt-3">Click an option to vote</p>
+        <p className="text-[11px] text-muted-foreground/50 mt-3 font-medium">Select an option to cast your vote</p>
       )}
     </div>
   );

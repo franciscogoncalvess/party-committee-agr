@@ -6,13 +6,13 @@ import AnnouncementCard from "@/components/AnnouncementCard";
 import EventCard from "@/components/EventCard";
 import { announcements, events } from "@/lib/mockData";
 
-const container = {
+const stagger = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
 };
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
 export default function Index() {
@@ -20,40 +20,42 @@ export default function Index() {
   const upcomingEvents = events.slice(0, 3);
 
   return (
-    <div className="container py-8 space-y-10 max-w-2xl">
+    <div className="container py-10 space-y-12 max-w-[680px]">
       {/* Hero */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center space-y-3 py-4"
+        transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+        className="text-center space-y-4 pt-4 pb-2"
       >
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full glass text-xs font-medium text-muted-foreground mb-2">
-          <Sparkles size={12} className="text-primary" />
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/8 border border-primary/15 text-xs font-medium text-primary"
+        >
+          <Sparkles size={12} />
           Your team hub
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Welcome to the{" "}
+        </motion.div>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
+          Welcome to the
+          <br />
           <span className="gradient-text">Party Committee</span>
         </h1>
-        <p className="text-muted-foreground text-sm max-w-md mx-auto">
-          Events, announcements & team fun at AGR Inventory — all in one place.
+        <p className="text-muted-foreground text-[15px] max-w-sm mx-auto leading-relaxed">
+          Events, announcements & team fun — all in one place.
         </p>
       </motion.section>
 
       {/* Announcements */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center gap-2 font-semibold text-lg">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Megaphone size={16} className="text-primary" />
-            </div>
-            Announcements
-          </h2>
-        </div>
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
+        <SectionHeader
+          icon={<Megaphone size={15} />}
+          title="Announcements"
+        />
+        <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
           {sortedAnnouncements.map((a) => (
-            <motion.div key={a.id} variants={item}>
+            <motion.div key={a.id} variants={fadeUp}>
               <AnnouncementCard announcement={a} />
             </motion.div>
           ))}
@@ -62,27 +64,39 @@ export default function Index() {
 
       {/* Upcoming Events */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center gap-2 font-semibold text-lg">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <CalendarDays size={16} className="text-primary" />
-            </div>
-            Upcoming Events
-          </h2>
-          <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary">
-            <Link to="/events" className="flex items-center gap-1 text-sm">
-              View all <ArrowRight size={14} />
-            </Link>
-          </Button>
-        </div>
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
+        <SectionHeader
+          icon={<CalendarDays size={15} />}
+          title="Upcoming Events"
+          action={
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary -mr-2">
+              <Link to="/events" className="flex items-center gap-1 text-[13px]">
+                View all <ArrowRight size={13} />
+              </Link>
+            </Button>
+          }
+        />
+        <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
           {upcomingEvents.map((e) => (
-            <motion.div key={e.id} variants={item}>
+            <motion.div key={e.id} variants={fadeUp}>
               <EventCard event={e} compact />
             </motion.div>
           ))}
         </motion.div>
       </section>
+    </div>
+  );
+}
+
+function SectionHeader({ icon, title, action }: { icon: React.ReactNode; title: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-5">
+      <h2 className="flex items-center gap-2.5 font-semibold text-[17px]">
+        <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10 text-primary">
+          {icon}
+        </span>
+        {title}
+      </h2>
+      {action}
     </div>
   );
 }

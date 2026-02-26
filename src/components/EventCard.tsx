@@ -7,16 +7,7 @@ function generateICS(event: Event) {
   const start = new Date(`${event.date}T${event.time}:00`);
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
   const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  return `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${fmt(start)}
-DTEND:${fmt(end)}
-SUMMARY:${event.title}
-DESCRIPTION:${event.description}
-LOCATION:${event.location}
-END:VEVENT
-END:VCALENDAR`;
+  return `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${fmt(start)}\nDTEND:${fmt(end)}\nSUMMARY:${event.title}\nDESCRIPTION:${event.description}\nLOCATION:${event.location}\nEND:VEVENT\nEND:VCALENDAR`;
 }
 
 export default function EventCard({ event, compact }: { event: Event; compact?: boolean }) {
@@ -44,23 +35,23 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
   const capacityPct = ((event.rsvpCount + (rsvpd ? 1 : 0)) / event.maxCapacity) * 100;
 
   return (
-    <div className="group glass rounded-xl p-4 transition-all duration-300 hover:translate-y-[-2px] hover:border-primary/20">
-      <div className="flex gap-3">
+    <div className="card-elevated p-5">
+      <div className="flex gap-4">
         {/* Date badge */}
-        <div className="shrink-0 flex flex-col items-center justify-center rounded-xl bg-primary/10 text-primary w-14 h-14 border border-primary/20">
-          <span className="text-[10px] font-semibold uppercase tracking-wider">
+        <div className="shrink-0 flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 text-primary w-16 h-16 border border-primary/10">
+          <span className="text-[10px] font-bold uppercase tracking-widest">
             {dateObj.toLocaleDateString("en-US", { month: "short" })}
           </span>
-          <span className="text-xl font-bold leading-none">{dateObj.getDate()}</span>
+          <span className="text-2xl font-bold leading-none -mt-0.5">{dateObj.getDate()}</span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm truncate">{event.title}</h3>
-          {!compact && <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{event.description}</p>}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><CalendarDays size={11} />{dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-            <span className="flex items-center gap-1"><MapPin size={11} />{event.location}</span>
-            <span className="flex items-center gap-1"><Users size={11} />{spotsLeft} spots left</span>
+          <h3 className="font-semibold text-[15px] truncate">{event.title}</h3>
+          {!compact && <p className="text-[13px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{event.description}</p>}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+            <MetaItem icon={<CalendarDays size={12} />} text={dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} />
+            <MetaItem icon={<MapPin size={12} />} text={event.location} />
+            <MetaItem icon={<Users size={12} />} text={`${spotsLeft} spots left`} highlight={spotsLeft < 10} />
           </div>
         </div>
       </div>
@@ -68,26 +59,29 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
       {!compact && (
         <>
           {/* Capacity bar */}
-          <div className="mt-3 h-1 rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-[hsl(280,80%,70%)] transition-all duration-500"
-              style={{ width: `${capacityPct}%` }}
-            />
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                style={{ width: `${capacityPct}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{Math.round(capacityPct)}%</span>
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Button
               size="sm"
               variant={rsvpd ? "secondary" : "default"}
               onClick={() => setRsvpd(!rsvpd)}
-              className={rsvpd ? "" : "glow-primary"}
+              className={`rounded-xl text-[13px] ${rsvpd ? "" : "badge-glow"}`}
             >
-              {rsvpd ? "Cancel RSVP" : "RSVP"}
+              {rsvpd ? "Cancel RSVP" : "RSVP Now"}
             </Button>
-            <Button size="sm" variant="outline" onClick={downloadICS} className="gap-1">
+            <Button size="sm" variant="outline" onClick={downloadICS} className="rounded-xl text-[13px] gap-1.5">
               <Download size={12} /> .ics
             </Button>
-            <Button size="sm" variant="outline" asChild className="gap-1">
+            <Button size="sm" variant="outline" asChild className="rounded-xl text-[13px] gap-1.5">
               <a href={googleCalUrl()} target="_blank" rel="noopener noreferrer">
                 <ExternalLink size={12} /> Google Cal
               </a>
@@ -96,5 +90,13 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
         </>
       )}
     </div>
+  );
+}
+
+function MetaItem({ icon, text, highlight }: { icon: React.ReactNode; text: string; highlight?: boolean }) {
+  return (
+    <span className={`flex items-center gap-1.5 text-[12px] font-medium ${highlight ? "text-warning" : "text-muted-foreground"}`}>
+      {icon}{text}
+    </span>
   );
 }
