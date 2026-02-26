@@ -16,41 +16,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Ambient background */}
-      <div className="fixed inset-0 -z-10" />
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-[600px] h-[300px] rounded-full bg-primary/5 blur-[100px]" />
-
       {/* Header */}
-      <header className="sticky top-0 z-50 glass-strong">
-        <div className="container flex h-14 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
+      <header className="sticky top-0 z-50 nav-glass">
+        <div className="container flex h-16 items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
             <AGRLogo className="h-7" />
-            <span className="hidden sm:inline text-xs font-medium text-muted-foreground tracking-widest uppercase">
+            <div className="hidden sm:block h-5 w-px bg-border" />
+            <span className="hidden sm:inline text-[13px] font-medium text-muted-foreground">
               Party Committee
             </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-0.5">
+          <nav className="hidden sm:flex items-center bg-secondary/60 rounded-full p-1">
             {navItems.map((item) => {
               const active = location.pathname === item.to;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 ${
                     active
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <item.icon size={15} />
+                  <item.icon size={14} />
                   {item.label}
                   {active && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 bg-primary rounded-lg -z-10 glow-primary"
-                      transition={{ type: "spring", duration: 0.4 }}
+                      className="absolute inset-0 bg-primary rounded-full -z-10 badge-glow"
+                      transition={{ type: "spring", duration: 0.45, bounce: 0.15 }}
                     />
                   )}
                 </Link>
@@ -60,7 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Mobile toggle */}
           <button
-            className="sm:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="sm:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -77,7 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               exit={{ height: 0, opacity: 0 }}
               className="sm:hidden border-t border-border/50 overflow-hidden"
             >
-              <div className="container py-2 flex flex-col gap-1">
+              <div className="container py-3 flex flex-col gap-1">
                 {navItems.map((item) => {
                   const active = location.pathname === item.to;
                   return (
@@ -85,9 +82,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       key={item.to}
                       to={item.to}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
                         active
-                          ? "bg-primary text-primary-foreground glow-primary"
+                          ? "bg-primary text-primary-foreground badge-glow"
                           : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                       }`}
                     >
@@ -106,17 +103,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
         >
           {children}
         </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-4 text-center text-xs text-muted-foreground">
-        AGR Inventory — Party Committee © {new Date().getFullYear()}
+      <footer className="py-6 text-center text-xs text-muted-foreground/60">
+        © {new Date().getFullYear()} AGR Inventory · Party Committee
       </footer>
     </div>
   );
