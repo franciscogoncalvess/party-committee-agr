@@ -64,6 +64,7 @@ export const polls: Poll[] = [
       { id: "1c", label: "🏎️ Karts", votes: 0 },
       { id: "1d", label: "🧗 Bouldering", votes: 0 },
       { id: "1e", label: "🧠 Quiz Game", votes: 0 },
+      { id: "1f", label: "🧘 Pilates", votes: 0 },
     ],
     endsAt: "2026-03-15",
     totalVotes: 0,
