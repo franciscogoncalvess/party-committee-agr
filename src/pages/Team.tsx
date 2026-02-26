@@ -76,7 +76,7 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
       className={`relative group ${isKing ? "col-span-full flex justify-center" : ""} ${isIntern ? "col-span-full flex justify-center" : ""}`}
     >
       <div
-        className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        className={`relative overflow-hidden rounded-2xl border transition-all duration-300 h-full flex flex-col items-center justify-start ${
           isKing
             ? "card-featured w-full max-w-md p-6 text-center"
             : isIntern
