@@ -40,7 +40,7 @@ export default function Index() {
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
           Welcome to the
           <br />
-          <span className="gradient-text">Party Committee</span>
+          <span className="text-primary">Party Committee</span>
         </h1>
         <p className="text-muted-foreground text-[15px] max-w-sm mx-auto leading-relaxed">
           Events, announcements & team fun — all in one place.
