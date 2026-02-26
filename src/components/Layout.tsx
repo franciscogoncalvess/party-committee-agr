@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, CalendarDays, BarChart3, Menu, X } from "lucide-react";
+import { Home, CalendarDays, BarChart3, Users, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import AGRLogo from "@/components/AGRLogo";
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: "/", label: "Home", icon: Home },
   { to: "/events", label: "Events", icon: CalendarDays },
   { to: "/polls", label: "Polls", icon: BarChart3 },
+  { to: "/team", label: "Team", icon: Users },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
