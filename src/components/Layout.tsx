@@ -16,9 +16,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Ambient background glow */}
-      <div className="fixed inset-0 -z-10 grid-bg" />
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-[800px] h-[400px] rounded-full bg-primary/5 blur-[120px]" />
+      {/* Ambient background */}
+      <div className="fixed inset-0 -z-10" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-[600px] h-[300px] rounded-full bg-primary/5 blur-[100px]" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass-strong">
