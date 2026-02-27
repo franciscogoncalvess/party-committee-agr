@@ -17,11 +17,15 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
   const dateObj = new Date(event.date + "T" + event.time);
   const deviceId = getDeviceId();
 
+  const [notGoingCount, setNotGoingCount] = useState(0);
+
   const fetchRsvps = useCallback(async () => {
-    const { count } = await supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", event.id);
-    setRsvpCount(count ?? 0);
-    const { data } = await supabase.from("event_rsvps").select("id").eq("event_id", event.id).eq("device_id", deviceId).maybeSingle();
-    setRsvpd(!!data);
+    const { count: goingC } = await supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "going");
+    setRsvpCount(goingC ?? 0);
+    const { count: notGoingC } = await supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "not_going");
+    setNotGoingCount(notGoingC ?? 0);
+    const { data } = await supabase.from("event_rsvps").select("id, status").eq("event_id", event.id).eq("device_id", deviceId).maybeSingle();
+    setRsvpd(data?.status === "going");
   }, [event.id, deviceId]);
 
   useEffect(() => { fetchRsvps(); }, [fetchRsvps]);
@@ -31,18 +35,15 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
     return () => { supabase.removeChannel(channel); };
   }, [event.id, fetchRsvps]);
 
-  const handleRsvp = async () => {
+  const handleRsvp = async (status: "going" | "not_going") => {
     setLoading(true);
-    if (rsvpd) {
-      await supabase.from("event_rsvps").delete().eq("event_id", event.id).eq("device_id", deviceId);
-    } else {
-      await supabase.from("event_rsvps").insert({ event_id: event.id, device_id: deviceId });
-    }
+    // Upsert: delete existing then insert new status
+    await supabase.from("event_rsvps").delete().eq("event_id", event.id).eq("device_id", deviceId);
+    await supabase.from("event_rsvps").insert({ event_id: event.id, device_id: deviceId, status });
     await fetchRsvps();
     setLoading(false);
   };
 
-  const spotsLeft = event.maxCapacity - rsvpCount;
   const capacityPct = (rsvpCount / event.maxCapacity) * 100;
 
   return (
@@ -62,7 +63,7 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
             <MetaItem icon={<CalendarDays size={12} />} text={dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} />
             <MetaItem icon={<MapPin size={12} />} text={event.location} />
-            <MetaItem icon={<Users size={12} />} text={`${spotsLeft} spots left`} highlight={spotsLeft < 10} />
+            <MetaItem icon={<Users size={12} />} text={`${rsvpCount} going · ${notGoingCount} not going`} />
           </div>
         </div>
       </div>
@@ -84,7 +85,7 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
             <Button
               size="sm"
               variant={rsvpd ? "default" : "outline"}
-              onClick={() => { if (!rsvpd) handleRsvp(); }}
+              onClick={() => { if (!rsvpd) handleRsvp("going"); }}
               disabled={loading}
               className={`rounded-xl text-[13px] ${rsvpd ? "badge-glow" : ""}`}
             >
@@ -93,8 +94,8 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
             <Button
               size="sm"
               variant={!rsvpd ? "default" : "outline"}
-              onClick={() => { if (rsvpd) handleRsvp(); }}
-              disabled={loading || !rsvpd}
+              onClick={() => { handleRsvp("not_going"); }}
+              disabled={loading}
               className="rounded-xl text-[13px]"
             >
               ❌ I'm not going

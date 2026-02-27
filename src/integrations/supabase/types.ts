@@ -20,18 +20,21 @@ export type Database = {
           device_id: string
           event_id: string
           id: string
+          status: string
         }
         Insert: {
           created_at?: string
           device_id: string
           event_id: string
           id?: string
+          status?: string
         }
         Update: {
           created_at?: string
           device_id?: string
           event_id?: string
           id?: string
+          status?: string
         }
         Relationships: []
       }
