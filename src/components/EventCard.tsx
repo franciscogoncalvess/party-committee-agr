@@ -83,12 +83,21 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
               size="sm"
-              variant={rsvpd ? "secondary" : "default"}
-              onClick={handleRsvp}
+              variant={rsvpd ? "default" : "outline"}
+              onClick={() => { if (!rsvpd) handleRsvp(); }}
               disabled={loading}
-              className={`rounded-xl text-[13px] ${rsvpd ? "" : "badge-glow"}`}
+              className={`rounded-xl text-[13px] ${rsvpd ? "badge-glow" : ""}`}
             >
-              {rsvpd ? "Cancel RSVP" : "RSVP Now"}
+              ✅ I'm going
+            </Button>
+            <Button
+              size="sm"
+              variant={!rsvpd ? "default" : "outline"}
+              onClick={() => { if (rsvpd) handleRsvp(); }}
+              disabled={loading || !rsvpd}
+              className="rounded-xl text-[13px]"
+            >
+              ❌ I'm not going
             </Button>
           </div>
         </>
