@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_rsvps: {
+        Row: {
+          created_at: string
+          device_id: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       poll_votes: {
         Row: {
           created_at: string
