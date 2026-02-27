@@ -1,29 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import type { Poll } from "@/lib/mockData";
 
+function getDeviceId(): string {
+  const key = "agr-device-id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
 export default function PollCard({ poll }: { poll: Poll }) {
-  const storageKey = `poll-vote-${poll.id}`;
-  const saved = localStorage.getItem(storageKey);
-  const [voted, setVoted] = useState<string | null>(saved);
-  const [localOptions, setLocalOptions] = useState(() =>
-    saved ? poll.options.map((o) => (o.id === saved ? { ...o, votes: o.votes + 1 } : o)) : poll.options
-  );
-  const totalVotes = localOptions.reduce((s, o) => s + o.votes, 0);
+  const deviceId = getDeviceId();
+  const [voted, setVoted] = useState<string | null>(null);
+  const [voteCounts, setVoteCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  const fetchVotes = useCallback(async () => {
+    const { data } = await supabase
+      .from("poll_votes")
+      .select("option_id, device_id")
+      .eq("poll_id", poll.id);
+
+    if (data) {
+      const counts: Record<string, number> = {};
+      let myVote: string | null = null;
+      for (const row of data) {
+        counts[row.option_id] = (counts[row.option_id] || 0) + 1;
+        if (row.device_id === deviceId) myVote = row.option_id;
+      }
+      setVoteCounts(counts);
+      setVoted(myVote);
+    }
+    setLoading(false);
+  }, [poll.id, deviceId]);
+
+  useEffect(() => {
+    fetchVotes();
+
+    const channel = supabase
+      .channel(`poll-${poll.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_votes", filter: `poll_id=eq.${poll.id}` }, () => {
+        fetchVotes();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchVotes, poll.id]);
+
   const endsDate = new Date(poll.endsAt);
   const isOpen = endsDate > new Date();
+  const totalVotes = poll.options.reduce((s, o) => s + (voteCounts[o.id] || 0), 0);
 
-  const handleVote = (optionId: string) => {
-    if (voted) return;
+  const handleVote = async (optionId: string) => {
+    if (voted || !isOpen) return;
     setVoted(optionId);
-    localStorage.setItem(storageKey, optionId);
-    setLocalOptions((prev) =>
-      prev.map((o) => (o.id === optionId ? { ...o, votes: o.votes + 1 } : o))
-    );
+    setVoteCounts((prev) => ({ ...prev, [optionId]: (prev[optionId] || 0) + 1 }));
+    await supabase.from("poll_votes").insert({ poll_id: poll.id, option_id: optionId, device_id: deviceId });
   };
 
-  const currentTotal = totalVotes + (voted ? 1 : 0);
+  const handleUnvote = async () => {
+    if (!voted) return;
+    const prev = voted;
+    setVoted(null);
+    setVoteCounts((c) => ({ ...c, [prev]: Math.max((c[prev] || 1) - 1, 0) }));
+    await supabase.from("poll_votes").delete().eq("poll_id", poll.id).eq("device_id", deviceId);
+  };
 
   return (
     <div className="card-elevated p-5">
@@ -36,58 +82,72 @@ export default function PollCard({ poll }: { poll: Poll }) {
           {isOpen ? `Ends ${endsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Closed"}
         </span>
         <span className="text-[11px] text-muted-foreground/60 font-medium">
-          {currentTotal} vote{currentTotal !== 1 ? "s" : ""}
+          {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
         </span>
       </div>
 
       <div className="mt-4 space-y-2">
-        {localOptions.map((option) => {
-          const pct = currentTotal > 0 ? (option.votes / currentTotal) * 100 : 0;
-          const isSelected = voted === option.id;
+        {loading ? (
+          <div className="text-[13px] text-muted-foreground py-4 text-center">Loading…</div>
+        ) : (
+          poll.options.map((option) => {
+            const count = voteCounts[option.id] || 0;
+            const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+            const isSelected = voted === option.id;
 
-          return (
-            <button
-              key={option.id}
-              onClick={() => isOpen && handleVote(option.id)}
-              disabled={!!voted || !isOpen}
-              className={`group relative w-full text-left rounded-xl border px-4 py-3 text-[13px] font-medium transition-all duration-200 overflow-hidden ${
-                isSelected
-                  ? "border-primary/40 bg-primary/5"
-                  : voted
-                  ? "border-border/60 bg-card"
-                  : "border-border/60 bg-card hover:border-primary/25 hover:bg-primary/[0.02] cursor-pointer"
-              }`}
-            >
-              {voted && (
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-                  className={`absolute inset-y-0 left-0 rounded-xl ${
-                    isSelected
-                      ? "bg-gradient-to-r from-primary/12 to-transparent"
-                      : "bg-muted/40"
-                  }`}
-                />
-              )}
-              <span className="relative flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  {isSelected && <CheckCircle2 size={14} className="text-primary" />}
-                  {option.label}
-                </span>
+            return (
+              <button
+                key={option.id}
+                onClick={() => isOpen && handleVote(option.id)}
+                disabled={!!voted || !isOpen}
+                className={`group relative w-full text-left rounded-xl border px-4 py-3 text-[13px] font-medium transition-all duration-200 overflow-hidden ${
+                  isSelected
+                    ? "border-primary/40 bg-primary/5"
+                    : voted
+                    ? "border-border/60 bg-card"
+                    : "border-border/60 bg-card hover:border-primary/25 hover:bg-primary/[0.02] cursor-pointer"
+                }`}
+              >
                 {voted && (
-                  <span className={`text-[12px] font-bold tabular-nums ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
-                    {Math.round(pct)}%
-                  </span>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+                    className={`absolute inset-y-0 left-0 rounded-xl ${
+                      isSelected
+                        ? "bg-gradient-to-r from-primary/12 to-transparent"
+                        : "bg-muted/40"
+                    }`}
+                  />
                 )}
-              </span>
-            </button>
-          );
-        })}
+                <span className="relative flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    {isSelected && <CheckCircle2 size={14} className="text-primary" />}
+                    {option.label}
+                  </span>
+                  {voted && (
+                    <span className={`text-[12px] font-bold tabular-nums ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                      {Math.round(pct)}%
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })
+        )}
       </div>
 
-      {!voted && isOpen && (
+      {!voted && isOpen && !loading && (
         <p className="text-[11px] text-muted-foreground/50 mt-3 font-medium">Select an option to cast your vote</p>
+      )}
+      {voted && isOpen && (
+        <button
+          onClick={handleUnvote}
+          className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-destructive mt-3 font-medium transition-colors"
+        >
+          <X size={12} />
+          Remove my vote
+        </button>
       )}
     </div>
   );
