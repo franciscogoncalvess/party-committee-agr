@@ -1,14 +1,49 @@
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Event } from "@/lib/mockData";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+function getDeviceId() {
+  let id = localStorage.getItem("device_id");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("device_id", id); }
+  return id;
+}
 
 export default function EventCard({ event, compact }: { event: Event; compact?: boolean }) {
   const [rsvpd, setRsvpd] = useState(false);
+  const [rsvpCount, setRsvpCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const dateObj = new Date(event.date + "T" + event.time);
+  const deviceId = getDeviceId();
 
-  const spotsLeft = event.maxCapacity - event.rsvpCount - (rsvpd ? 1 : 0);
-  const capacityPct = ((event.rsvpCount + (rsvpd ? 1 : 0)) / event.maxCapacity) * 100;
+  const fetchRsvps = useCallback(async () => {
+    const { count } = await supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", event.id);
+    setRsvpCount(count ?? 0);
+    const { data } = await supabase.from("event_rsvps").select("id").eq("event_id", event.id).eq("device_id", deviceId).maybeSingle();
+    setRsvpd(!!data);
+  }, [event.id, deviceId]);
+
+  useEffect(() => { fetchRsvps(); }, [fetchRsvps]);
+
+  useEffect(() => {
+    const channel = supabase.channel(`rsvps-${event.id}`).on("postgres_changes", { event: "*", schema: "public", table: "event_rsvps", filter: `event_id=eq.${event.id}` }, () => fetchRsvps()).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [event.id, fetchRsvps]);
+
+  const handleRsvp = async () => {
+    setLoading(true);
+    if (rsvpd) {
+      await supabase.from("event_rsvps").delete().eq("event_id", event.id).eq("device_id", deviceId);
+    } else {
+      await supabase.from("event_rsvps").insert({ event_id: event.id, device_id: deviceId });
+    }
+    await fetchRsvps();
+    setLoading(false);
+  };
+
+  const spotsLeft = event.maxCapacity - rsvpCount;
+  const capacityPct = (rsvpCount / event.maxCapacity) * 100;
 
   return (
     <div className="card-elevated p-5">
@@ -49,7 +84,8 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
             <Button
               size="sm"
               variant={rsvpd ? "secondary" : "default"}
-              onClick={() => setRsvpd(!rsvpd)}
+              onClick={handleRsvp}
+              disabled={loading}
               className={`rounded-xl text-[13px] ${rsvpd ? "" : "badge-glow"}`}
             >
               {rsvpd ? "Cancel RSVP" : "RSVP Now"}
