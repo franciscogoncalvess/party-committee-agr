@@ -113,8 +113,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center text-xs text-muted-foreground/60">
-        © {new Date().getFullYear()} AGR Inventory · Party Committee
+      <footer className="py-6 text-center text-xs text-muted-foreground/60 flex items-center justify-center gap-2">
+        <span>© {new Date().getFullYear()} AGR Inventory · Party Committee</span>
+        <span>·</span>
+        <Link to="/login" className="hover:text-primary transition-colors">Admin</Link>
       </footer>
     </div>
   );
