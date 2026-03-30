@@ -1,0 +1,230 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, LogOut, Pin } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Admin() {
+  const { session, loading, signOut } = useAuth();
+
+  if (loading) return <div className="container py-20 text-center text-muted-foreground">Loading…</div>;
+  if (!session) return <Navigate to="/login" replace />;
+
+  return (
+    <div className="container py-10 max-w-[720px] space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">🎛️ Admin Dashboard</h1>
+        <Button variant="ghost" size="sm" onClick={signOut}>
+          <LogOut size={14} /> Logout
+        </Button>
+      </div>
+      <Tabs defaultValue="events">
+        <TabsList className="w-full">
+          <TabsTrigger value="events" className="flex-1">Events</TabsTrigger>
+          <TabsTrigger value="polls" className="flex-1">Polls</TabsTrigger>
+          <TabsTrigger value="announcements" className="flex-1">Announcements</TabsTrigger>
+        </TabsList>
+        <TabsContent value="events"><EventsAdmin /></TabsContent>
+        <TabsContent value="polls"><PollsAdmin /></TabsContent>
+        <TabsContent value="announcements"><AnnouncementsAdmin /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ─── Events Admin ─── */
+function EventsAdmin() {
+  const [events, setEvents] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("12:00");
+  const [location, setLocation] = useState("");
+
+  const fetchEvents = async () => {
+    const { data } = await supabase.from("events").select("*").order("date", { ascending: true });
+    setEvents(data ?? []);
+  };
+  useEffect(() => { fetchEvents(); }, []);
+
+  const handleAdd = async () => {
+    if (!title || !date) { toast.error("Title and date required"); return; }
+    const { error } = await supabase.from("events").insert({ title, description, date, time, location });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Event created!");
+    setTitle(""); setDescription(""); setDate(""); setTime("12:00"); setLocation("");
+    fetchEvents();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("events").delete().eq("id", id);
+    toast.success("Deleted");
+    fetchEvents();
+  };
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="card-elevated p-5 space-y-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><Plus size={14} /> New Event</h3>
+        <Input placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} />
+        <Textarea placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} />
+        <div className="grid grid-cols-3 gap-2">
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
+          <Input placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} />
+        </div>
+        <Button onClick={handleAdd} size="sm">Create Event</Button>
+      </div>
+      <div className="space-y-2">
+        {events.map(e => (
+          <div key={e.id} className="card-elevated p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">{e.title}</p>
+              <p className="text-xs text-muted-foreground">{e.date} · {e.time} · {e.location}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}>
+              <Trash2 size={14} className="text-destructive" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Polls Admin ─── */
+function PollsAdmin() {
+  const [polls, setPolls] = useState<any[]>([]);
+  const [question, setQuestion] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [options, setOptions] = useState(["", ""]);
+
+  const fetchPolls = async () => {
+    const { data } = await supabase.from("polls").select("*, poll_options(*)").order("created_at", { ascending: false });
+    setPolls(data ?? []);
+  };
+  useEffect(() => { fetchPolls(); }, []);
+
+  const handleAdd = async () => {
+    if (!question || !endsAt || options.filter(o => o.trim()).length < 2) {
+      toast.error("Need question, end date, and at least 2 options"); return;
+    }
+    const { data, error } = await supabase.from("polls").insert({ question, ends_at: endsAt }).select().single();
+    if (error || !data) { toast.error(error?.message ?? "Error"); return; }
+    const optRows = options.filter(o => o.trim()).map((label, i) => ({ poll_id: data.id, label, sort_order: i }));
+    await supabase.from("poll_options").insert(optRows);
+    toast.success("Poll created!");
+    setQuestion(""); setEndsAt(""); setOptions(["", ""]);
+    fetchPolls();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("polls").delete().eq("id", id);
+    toast.success("Deleted");
+    fetchPolls();
+  };
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="card-elevated p-5 space-y-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><Plus size={14} /> New Poll</h3>
+        <Input placeholder="Question" value={question} onChange={e => setQuestion(e.target.value)} />
+        <Input type="date" placeholder="Ends at" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+        <div className="space-y-2">
+          {options.map((opt, i) => (
+            <div key={i} className="flex gap-2">
+              <Input
+                placeholder={`Option ${i + 1}`}
+                value={opt}
+                onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }}
+              />
+              {options.length > 2 && (
+                <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter((_, j) => j !== i))}>
+                  <Trash2 size={14} />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => setOptions([...options, ""])}>
+            <Plus size={12} /> Add Option
+          </Button>
+        </div>
+        <Button onClick={handleAdd} size="sm">Create Poll</Button>
+      </div>
+      <div className="space-y-2">
+        {polls.map(p => (
+          <div key={p.id} className="card-elevated p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">{p.question}</p>
+              <p className="text-xs text-muted-foreground">Ends: {p.ends_at} · {p.poll_options?.length ?? 0} options</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+              <Trash2 size={14} className="text-destructive" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Announcements Admin ─── */
+function AnnouncementsAdmin() {
+  const [items, setItems] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [pinned, setPinned] = useState(false);
+
+  const fetch_ = async () => {
+    const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+    setItems(data ?? []);
+  };
+  useEffect(() => { fetch_(); }, []);
+
+  const handleAdd = async () => {
+    if (!title) { toast.error("Title required"); return; }
+    await supabase.from("announcements").insert({ title, body, pinned });
+    toast.success("Announcement created!");
+    setTitle(""); setBody(""); setPinned(false);
+    fetch_();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("announcements").delete().eq("id", id);
+    toast.success("Deleted");
+    fetch_();
+  };
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="card-elevated p-5 space-y-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><Plus size={14} /> New Announcement</h3>
+        <Input placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} />
+        <Textarea placeholder="Body" value={body} onChange={e => setBody(e.target.value)} />
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={pinned} onChange={e => setPinned(e.target.checked)} className="rounded" />
+          <Pin size={12} /> Pin this announcement
+        </label>
+        <Button onClick={handleAdd} size="sm">Create Announcement</Button>
+      </div>
+      <div className="space-y-2">
+        {items.map(a => (
+          <div key={a.id} className="card-elevated p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">{a.title}</p>
+              <p className="text-xs text-muted-foreground">{a.date} {a.pinned ? "📌" : ""}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}>
+              <Trash2 size={14} className="text-destructive" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
