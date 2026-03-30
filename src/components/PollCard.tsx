@@ -18,7 +18,8 @@ interface PollProps {
     id: string;
     question: string;
     ends_at: string;
-    poll_options: { id: string; label: string; sort_order: number }[];
+    activity_date?: string;
+    poll_options: { id: string; label: string; sort_order: number; description?: string }[];
   };
 }
 
@@ -82,6 +83,11 @@ export default function PollCard({ poll }: PollProps) {
   return (
     <div className="card-elevated p-5">
       <h3 className="font-semibold text-[15px]">{poll.question}</h3>
+      {poll.activity_date && (
+        <p className="text-[12px] text-muted-foreground mt-1">
+          📅 Activity: {new Date(poll.activity_date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+        </p>
+      )}
       <div className="flex items-center gap-2 mt-1.5">
         <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
           isOpen ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
@@ -131,7 +137,12 @@ export default function PollCard({ poll }: PollProps) {
                 <span className="relative flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     {isSelected && <CheckCircle2 size={14} className="text-primary" />}
-                    {option.label}
+                    <span>
+                      {option.label}
+                      {option.description && (
+                        <span className="block text-[11px] text-muted-foreground font-normal">{option.description}</span>
+                      )}
+                    </span>
                   </span>
                   {voted && (
                     <span className={`text-[12px] font-bold tabular-nums ${isSelected ? "text-primary" : "text-muted-foreground"}`}>

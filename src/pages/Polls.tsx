@@ -16,7 +16,8 @@ interface PollFromDB {
   id: string;
   question: string;
   ends_at: string;
-  poll_options: { id: string; label: string; sort_order: number }[];
+  activity_date?: string;
+  poll_options: { id: string; label: string; sort_order: number; description?: string }[];
 }
 
 export default function Polls() {
