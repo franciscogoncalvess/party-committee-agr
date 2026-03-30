@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, LogOut, Pin } from "lucide-react";
+import { Plus, Trash2, LogOut, Pin, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Admin() {
@@ -107,6 +107,7 @@ function PollsAdmin() {
     { label: "", description: "" },
     { label: "", description: "" },
   ]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchPolls = async () => {
     const { data } = await supabase.from("polls").select("*, poll_options(*)").order("created_at", { ascending: false });
@@ -114,29 +115,62 @@ function PollsAdmin() {
   };
   useEffect(() => { fetchPolls(); }, []);
 
+  const resetForm = () => {
+    setQuestion(""); setActivityDate(""); setEndsAt("");
+    setOptions([{ label: "", description: "" }, { label: "", description: "" }]);
+    setEditingId(null);
+  };
+
+  const startEdit = (p: any) => {
+    setEditingId(p.id);
+    setQuestion(p.question);
+    setActivityDate(p.activity_date ?? "");
+    setEndsAt(p.ends_at);
+    const sorted = [...(p.poll_options ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
+    setOptions(sorted.map((o: any) => ({ label: o.label, description: o.description ?? "" })));
+  };
+
   const handleAdd = async () => {
     if (!question || !endsAt || options.filter(o => o.label.trim()).length < 2) {
       toast.error("Need question, end date, and at least 2 options"); return;
     }
-    const { data, error } = await supabase.from("polls").insert({ question, ends_at: endsAt, activity_date: activityDate || null } as any).select().single();
-    if (error || !data) { toast.error(error?.message ?? "Error"); return; }
-    const optRows = options.filter(o => o.label.trim()).map((o, i) => ({ poll_id: data.id, label: o.label, description: o.description || "", sort_order: i } as any));
-    await supabase.from("poll_options").insert(optRows);
-    toast.success("Poll created!");
-    setQuestion(""); setActivityDate(""); setEndsAt(""); setOptions([{ label: "", description: "" }, { label: "", description: "" }]);
+
+    if (editingId) {
+      const { error } = await supabase.from("polls").update({ question, ends_at: endsAt, activity_date: activityDate || null } as any).eq("id", editingId);
+      if (error) { toast.error(error.message); return; }
+      await supabase.from("poll_options").delete().eq("poll_id", editingId);
+      const optRows = options.filter(o => o.label.trim()).map((o, i) => ({ poll_id: editingId, label: o.label, description: o.description || "", sort_order: i } as any));
+      await supabase.from("poll_options").insert(optRows);
+      toast.success("Poll updated!");
+    } else {
+      const { data, error } = await supabase.from("polls").insert({ question, ends_at: endsAt, activity_date: activityDate || null } as any).select().single();
+      if (error || !data) { toast.error(error?.message ?? "Error"); return; }
+      const optRows = options.filter(o => o.label.trim()).map((o, i) => ({ poll_id: data.id, label: o.label, description: o.description || "", sort_order: i } as any));
+      await supabase.from("poll_options").insert(optRows);
+      toast.success("Poll created!");
+    }
+    resetForm();
     fetchPolls();
   };
 
   const handleDelete = async (id: string) => {
     await supabase.from("polls").delete().eq("id", id);
     toast.success("Deleted");
+    if (editingId === id) resetForm();
     fetchPolls();
   };
 
   return (
     <div className="space-y-6 mt-4">
       <div className="card-elevated p-5 space-y-3">
-        <h3 className="font-semibold text-sm flex items-center gap-2"><Plus size={14} /> New Poll</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            {editingId ? <><Pencil size={14} /> Edit Poll</> : <><Plus size={14} /> New Poll</>}
+          </h3>
+          {editingId && (
+            <Button variant="ghost" size="sm" onClick={resetForm}><X size={14} /> Cancel</Button>
+          )}
+        </div>
         <Input placeholder="Question" value={question} onChange={e => setQuestion(e.target.value)} />
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -175,7 +209,7 @@ function PollsAdmin() {
             <Plus size={12} /> Add Option
           </Button>
         </div>
-        <Button onClick={handleAdd} size="sm">Create Poll</Button>
+        <Button onClick={handleAdd} size="sm">{editingId ? "Update Poll" : "Create Poll"}</Button>
       </div>
       <div className="space-y-2">
         {polls.map(p => (
@@ -184,9 +218,14 @@ function PollsAdmin() {
               <p className="font-medium text-sm">{p.question}</p>
               <p className="text-xs text-muted-foreground">Ends: {p.ends_at} · {p.poll_options?.length ?? 0} options</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-              <Trash2 size={14} className="text-destructive" />
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
+                <Pencil size={14} />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                <Trash2 size={14} className="text-destructive" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
