@@ -100,18 +100,21 @@ export type Database = {
       }
       poll_options: {
         Row: {
+          description: string | null
           id: string
           label: string
           poll_id: string
           sort_order: number
         }
         Insert: {
+          description?: string | null
           id?: string
           label: string
           poll_id: string
           sort_order?: number
         }
         Update: {
+          description?: string | null
           id?: string
           label?: string
           poll_id?: string
@@ -153,18 +156,21 @@ export type Database = {
       }
       polls: {
         Row: {
+          activity_date: string | null
           created_at: string
           ends_at: string
           id: string
           question: string
         }
         Insert: {
+          activity_date?: string | null
           created_at?: string
           ends_at: string
           id?: string
           question: string
         }
         Update: {
+          activity_date?: string | null
           created_at?: string
           ends_at?: string
           id?: string
