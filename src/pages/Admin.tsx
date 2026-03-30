@@ -101,8 +101,12 @@ function EventsAdmin() {
 function PollsAdmin() {
   const [polls, setPolls] = useState<any[]>([]);
   const [question, setQuestion] = useState("");
+  const [activityDate, setActivityDate] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [options, setOptions] = useState(["", ""]);
+  const [options, setOptions] = useState<{ label: string; description: string }[]>([
+    { label: "", description: "" },
+    { label: "", description: "" },
+  ]);
 
   const fetchPolls = async () => {
     const { data } = await supabase.from("polls").select("*, poll_options(*)").order("created_at", { ascending: false });
@@ -111,15 +115,15 @@ function PollsAdmin() {
   useEffect(() => { fetchPolls(); }, []);
 
   const handleAdd = async () => {
-    if (!question || !endsAt || options.filter(o => o.trim()).length < 2) {
+    if (!question || !endsAt || options.filter(o => o.label.trim()).length < 2) {
       toast.error("Need question, end date, and at least 2 options"); return;
     }
-    const { data, error } = await supabase.from("polls").insert({ question, ends_at: endsAt }).select().single();
+    const { data, error } = await supabase.from("polls").insert({ question, ends_at: endsAt, activity_date: activityDate || null } as any).select().single();
     if (error || !data) { toast.error(error?.message ?? "Error"); return; }
-    const optRows = options.filter(o => o.trim()).map((label, i) => ({ poll_id: data.id, label, sort_order: i }));
+    const optRows = options.filter(o => o.label.trim()).map((o, i) => ({ poll_id: data.id, label: o.label, description: o.description || "", sort_order: i } as any));
     await supabase.from("poll_options").insert(optRows);
     toast.success("Poll created!");
-    setQuestion(""); setEndsAt(""); setOptions(["", ""]);
+    setQuestion(""); setActivityDate(""); setEndsAt(""); setOptions([{ label: "", description: "" }, { label: "", description: "" }]);
     fetchPolls();
   };
 
@@ -134,23 +138,40 @@ function PollsAdmin() {
       <div className="card-elevated p-5 space-y-3">
         <h3 className="font-semibold text-sm flex items-center gap-2"><Plus size={14} /> New Poll</h3>
         <Input placeholder="Question" value={question} onChange={e => setQuestion(e.target.value)} />
-        <Input type="date" placeholder="Ends at" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-muted-foreground">Activity Date</label>
+            <Input type="date" value={activityDate} onChange={e => setActivityDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Voting Ends</label>
+            <Input type="date" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+          </div>
+        </div>
         <div className="space-y-2">
           {options.map((opt, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="space-y-1">
+              <div className="flex gap-2">
+                <Input
+                  placeholder={`Option ${i + 1}`}
+                  value={opt.label}
+                  onChange={e => { const n = [...options]; n[i] = { ...n[i], label: e.target.value }; setOptions(n); }}
+                />
+                {options.length > 2 && (
+                  <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter((_, j) => j !== i))}>
+                    <Trash2 size={14} />
+                  </Button>
+                )}
+              </div>
               <Input
-                placeholder={`Option ${i + 1}`}
-                value={opt}
-                onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }}
+                placeholder="Description (optional)"
+                value={opt.description}
+                className="text-xs"
+                onChange={e => { const n = [...options]; n[i] = { ...n[i], description: e.target.value }; setOptions(n); }}
               />
-              {options.length > 2 && (
-                <Button variant="ghost" size="icon" onClick={() => setOptions(options.filter((_, j) => j !== i))}>
-                  <Trash2 size={14} />
-                </Button>
-              )}
             </div>
           ))}
-          <Button variant="outline" size="sm" onClick={() => setOptions([...options, ""])}>
+          <Button variant="outline" size="sm" onClick={() => setOptions([...options, { label: "", description: "" }])}>
             <Plus size={12} /> Add Option
           </Button>
         </div>
