@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          date: string
+          id: string
+          pinned: boolean
+          title: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          date?: string
+          id?: string
+          pinned?: boolean
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          date?: string
+          id?: string
+          pinned?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       event_rsvps: {
         Row: {
           created_at: string
@@ -38,6 +65,68 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          created_at: string
+          date: string
+          description: string
+          id: string
+          location: string
+          max_capacity: number
+          time: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          location?: string
+          max_capacity?: number
+          time?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          location?: string
+          max_capacity?: number
+          time?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      poll_options: {
+        Row: {
+          id: string
+          label: string
+          poll_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          poll_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          poll_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_votes: {
         Row: {
           created_at: string
@@ -59,6 +148,27 @@ export type Database = {
           id?: string
           option_id?: string
           poll_id?: string
+        }
+        Relationships: []
+      }
+      polls: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          question: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          question: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          question?: string
         }
         Relationships: []
       }
