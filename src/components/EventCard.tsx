@@ -1,6 +1,5 @@
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Event } from "@/lib/mockData";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,14 +9,26 @@ function getDeviceId() {
   return id;
 }
 
-export default function EventCard({ event, compact }: { event: Event; compact?: boolean }) {
+interface EventProps {
+  event: {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    time: string;
+    location: string;
+    max_capacity: number;
+  };
+  compact?: boolean;
+}
+
+export default function EventCard({ event, compact }: EventProps) {
   const [rsvpd, setRsvpd] = useState(false);
   const [rsvpCount, setRsvpCount] = useState(0);
+  const [notGoingCount, setNotGoingCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dateObj = new Date(event.date + "T" + event.time);
   const deviceId = getDeviceId();
-
-  const [notGoingCount, setNotGoingCount] = useState(0);
 
   const fetchRsvps = useCallback(async () => {
     const { count: goingC } = await supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "going");
@@ -37,19 +48,15 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
 
   const handleRsvp = async (status: "going" | "not_going") => {
     setLoading(true);
-    // Upsert: delete existing then insert new status
     await supabase.from("event_rsvps").delete().eq("event_id", event.id).eq("device_id", deviceId);
     await supabase.from("event_rsvps").insert({ event_id: event.id, device_id: deviceId, status });
     await fetchRsvps();
     setLoading(false);
   };
 
-  const capacityPct = (rsvpCount / event.maxCapacity) * 100;
-
   return (
     <div className="card-elevated p-5">
       <div className="flex gap-4">
-        {/* Date badge */}
         <div className="shrink-0 flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 text-primary w-16 h-16 border border-primary/10">
           <span className="text-[10px] font-bold uppercase tracking-widest">
             {dateObj.toLocaleDateString("en-US", { month: "short" })}
@@ -69,47 +76,34 @@ export default function EventCard({ event, compact }: { event: Event; compact?: 
       </div>
 
       {!compact && (
-        <>
-          {/* Capacity bar */}
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                style={{ width: `${capacityPct}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{Math.round(capacityPct)}%</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mt-4">
-            <Button
-              size="sm"
-              variant={rsvpd ? "default" : "outline"}
-              onClick={() => { if (!rsvpd) handleRsvp("going"); }}
-              disabled={loading}
-              className={`rounded-xl text-[13px] ${rsvpd ? "badge-glow" : ""}`}
-            >
-              ✅ I'm going
-            </Button>
-            <Button
-              size="sm"
-              variant={!rsvpd ? "default" : "outline"}
-              onClick={() => { handleRsvp("not_going"); }}
-              disabled={loading}
-              className="rounded-xl text-[13px]"
-            >
-              ❌ I'm not going
-            </Button>
-          </div>
-        </>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <Button
+            size="sm"
+            variant={rsvpd ? "default" : "outline"}
+            onClick={() => { if (!rsvpd) handleRsvp("going"); }}
+            disabled={loading}
+            className={`rounded-xl text-[13px] ${rsvpd ? "badge-glow" : ""}`}
+          >
+            ✅ I'm going
+          </Button>
+          <Button
+            size="sm"
+            variant={!rsvpd ? "default" : "outline"}
+            onClick={() => { handleRsvp("not_going"); }}
+            disabled={loading}
+            className="rounded-xl text-[13px]"
+          >
+            ❌ I'm not going
+          </Button>
+        </div>
       )}
     </div>
   );
 }
 
-function MetaItem({ icon, text, highlight }: { icon: React.ReactNode; text: string; highlight?: boolean }) {
+function MetaItem({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <span className={`flex items-center gap-1.5 text-[12px] font-medium ${highlight ? "text-warning" : "text-muted-foreground"}`}>
+    <span className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
       {icon}{text}
     </span>
   );

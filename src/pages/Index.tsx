@@ -1,10 +1,11 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Megaphone, CalendarDays, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import AnnouncementCard from "@/components/AnnouncementCard";
 import EventCard from "@/components/EventCard";
-import { announcements, events } from "@/lib/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -16,8 +17,18 @@ const fadeUp = {
 };
 
 export default function Index() {
-  const sortedAnnouncements = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-  const upcomingEvents = events.slice(0, 3);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: ann } = await supabase.from("announcements").select("*").order("pinned", { ascending: false }).order("created_at", { ascending: false });
+      setAnnouncements(ann ?? []);
+      const { data: ev } = await supabase.from("events").select("*").order("date", { ascending: true }).limit(3);
+      setEvents(ev ?? []);
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="container py-10 space-y-12 max-w-[680px]">
@@ -49,12 +60,9 @@ export default function Index() {
 
       {/* Announcements */}
       <section>
-        <SectionHeader
-          icon={<Megaphone size={15} />}
-          title="Announcements"
-        />
+        <SectionHeader icon={<Megaphone size={15} />} title="Announcements" />
         <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
-          {sortedAnnouncements.map((a) => (
+          {announcements.map((a) => (
             <motion.div key={a.id} variants={fadeUp}>
               <AnnouncementCard announcement={a} />
             </motion.div>
@@ -76,7 +84,7 @@ export default function Index() {
           }
         />
         <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
-          {upcomingEvents.map((e) => (
+          {events.map((e) => (
             <motion.div key={e.id} variants={fadeUp}>
               <EventCard event={e} compact />
             </motion.div>

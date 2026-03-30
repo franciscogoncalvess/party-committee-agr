@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Poll } from "@/lib/mockData";
 
 function getDeviceId(): string {
   const key = "agr-device-id";
@@ -14,11 +13,22 @@ function getDeviceId(): string {
   return id;
 }
 
-export default function PollCard({ poll }: { poll: Poll }) {
+interface PollProps {
+  poll: {
+    id: string;
+    question: string;
+    ends_at: string;
+    poll_options: { id: string; label: string; sort_order: number }[];
+  };
+}
+
+export default function PollCard({ poll }: PollProps) {
   const deviceId = getDeviceId();
   const [voted, setVoted] = useState<string | null>(null);
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  const options = [...(poll.poll_options ?? [])].sort((a, b) => a.sort_order - b.sort_order);
 
   const fetchVotes = useCallback(async () => {
     const { data } = await supabase
@@ -41,20 +51,18 @@ export default function PollCard({ poll }: { poll: Poll }) {
 
   useEffect(() => {
     fetchVotes();
-
     const channel = supabase
       .channel(`poll-${poll.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "poll_votes", filter: `poll_id=eq.${poll.id}` }, () => {
         fetchVotes();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [fetchVotes, poll.id]);
 
-  const endsDate = new Date(poll.endsAt);
+  const endsDate = new Date(poll.ends_at);
   const isOpen = endsDate > new Date();
-  const totalVotes = poll.options.reduce((s, o) => s + (voteCounts[o.id] || 0), 0);
+  const totalVotes = options.reduce((s, o) => s + (voteCounts[o.id] || 0), 0);
 
   const handleVote = async (optionId: string) => {
     if (voted || !isOpen) return;
@@ -90,7 +98,7 @@ export default function PollCard({ poll }: { poll: Poll }) {
         {loading ? (
           <div className="text-[13px] text-muted-foreground py-4 text-center">Loading…</div>
         ) : (
-          poll.options.map((option) => {
+          options.map((option) => {
             const count = voteCounts[option.id] || 0;
             const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
             const isSelected = voted === option.id;

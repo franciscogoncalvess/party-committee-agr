@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import EventCard from "@/components/EventCard";
-import { events } from "@/lib/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -12,6 +13,16 @@ const fadeUp = {
 };
 
 export default function Events() {
+  const [events, setEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetch_ = async () => {
+      const { data } = await supabase.from("events").select("*").order("date", { ascending: true });
+      setEvents(data ?? []);
+    };
+    fetch_();
+  }, []);
+
   return (
     <div className="container py-10 max-w-[680px] space-y-6">
       <div>
