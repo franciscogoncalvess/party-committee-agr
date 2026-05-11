@@ -213,22 +213,66 @@ function PollsAdmin() {
       </div>
       <div className="space-y-2">
         {polls.map(p => (
-          <div key={p.id} className="card-elevated p-4 flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">{p.question}</p>
-              <p className="text-xs text-muted-foreground">Ends: {p.ends_at} · {p.poll_options?.length ?? 0} options</p>
+          <div key={p.id} className="card-elevated p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm">{p.question}</p>
+                <p className="text-xs text-muted-foreground">Ends: {p.ends_at} · {p.poll_options?.length ?? 0} options</p>
+              </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
+                  <Pencil size={14} />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                  <Trash2 size={14} className="text-destructive" />
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
-                <Pencil size={14} />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                <Trash2 size={14} className="text-destructive" />
-              </Button>
-            </div>
+            <PollSuggestionsAdmin pollId={p.id} />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PollSuggestionsAdmin({ pollId }: { pollId: string }) {
+  const [items, setItems] = useState<any[]>([]);
+
+  const fetch_ = async () => {
+    const { data } = await supabase
+      .from("poll_suggestions")
+      .select("*")
+      .eq("poll_id", pollId)
+      .order("created_at", { ascending: true });
+    setItems(data ?? []);
+  };
+  useEffect(() => { fetch_(); }, [pollId]);
+
+  const remove = async (id: string) => {
+    await supabase.from("poll_suggestions").delete().eq("id", id);
+    toast.success("Suggestion removed");
+    fetch_();
+  };
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="border-t border-border/50 pt-3">
+      <p className="text-[11px] font-semibold text-muted-foreground mb-2">💡 User suggestions ({items.length})</p>
+      <ul className="space-y-1.5">
+        {items.map((s) => (
+          <li key={s.id} className="flex items-start justify-between gap-2 rounded-md bg-muted/40 px-2.5 py-1.5">
+            <div className="min-w-0">
+              <p className="text-xs font-medium truncate">{s.label}</p>
+              {s.description && <p className="text-[11px] text-muted-foreground">{s.description}</p>}
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => remove(s.id)}>
+              <Trash2 size={12} className="text-destructive" />
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

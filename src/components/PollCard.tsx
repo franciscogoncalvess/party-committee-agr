@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, X } from "lucide-react";
+import { CheckCircle2, Clock, X, Lightbulb, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function getDeviceId(): string {
   const key = "agr-device-id";
@@ -167,6 +168,119 @@ export default function PollCard({ poll }: PollProps) {
           <X size={12} />
           Remove my vote
         </button>
+      )}
+
+      <SuggestionsSection pollId={poll.id} deviceId={deviceId} isOpen={isOpen} />
+    </div>
+  );
+}
+
+function SuggestionsSection({ pollId, deviceId, isOpen }: { pollId: string; deviceId: string; isOpen: boolean }) {
+  const [suggestions, setSuggestions] = useState<{ id: string; label: string; description: string; device_id: string }[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [label, setLabel] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchSuggestions = useCallback(async () => {
+    const { data } = await supabase
+      .from("poll_suggestions")
+      .select("id, label, description, device_id")
+      .eq("poll_id", pollId)
+      .order("created_at", { ascending: true });
+    if (data) setSuggestions(data as any);
+  }, [pollId]);
+
+  useEffect(() => {
+    fetchSuggestions();
+    const channel = supabase
+      .channel(`poll-suggestions-${pollId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_suggestions", filter: `poll_id=eq.${pollId}` }, () => fetchSuggestions())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchSuggestions, pollId]);
+
+  const handleSubmit = async () => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    if (trimmed.length > 120) { toast.error("Keep it under 120 characters"); return; }
+    setSubmitting(true);
+    const { error } = await supabase.from("poll_suggestions").insert({
+      poll_id: pollId,
+      label: trimmed,
+      description: description.trim().slice(0, 280),
+      device_id: deviceId,
+    });
+    setSubmitting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Idea submitted!");
+    setLabel(""); setDescription(""); setShowForm(false);
+  };
+
+  return (
+    <div className="mt-5 pt-4 border-t border-border/50">
+      <div className="flex items-center justify-between">
+        <h4 className="text-[12px] font-semibold flex items-center gap-1.5 text-muted-foreground">
+          <Lightbulb size={12} /> Ideas from the team {suggestions.length > 0 && <span className="text-muted-foreground/60">({suggestions.length})</span>}
+        </h4>
+        {isOpen && !showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="text-[11px] font-semibold text-primary hover:text-primary/80 flex items-center gap-1"
+          >
+            <Plus size={11} /> Suggest
+          </button>
+        )}
+      </div>
+
+      {suggestions.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {suggestions.map((s) => (
+            <li key={s.id} className="rounded-lg bg-muted/40 px-3 py-2 text-[12px]">
+              <p className="font-medium">{s.label}</p>
+              {s.description && <p className="text-[11px] text-muted-foreground mt-0.5">{s.description}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {showForm && (
+        <div className="mt-3 space-y-2">
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            maxLength={120}
+            placeholder="Your idea"
+            className="w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-[13px] focus:outline-none focus:border-primary/40"
+          />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={280}
+            placeholder="Why? (optional)"
+            rows={2}
+            className="w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-[12px] focus:outline-none focus:border-primary/40 resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !label.trim()}
+              className="text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+            >
+              {submitting ? "Sending…" : "Submit"}
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setLabel(""); setDescription(""); }}
+              className="text-[12px] font-medium px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {suggestions.length === 0 && !showForm && (
+        <p className="text-[11px] text-muted-foreground/60 mt-1.5">Got a better option? Share it!</p>
       )}
     </div>
   );
