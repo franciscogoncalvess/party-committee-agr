@@ -130,33 +130,6 @@ export type Database = {
           },
         ]
       }
-      poll_suggestions: {
-        Row: {
-          created_at: string
-          description: string
-          device_id: string
-          id: string
-          label: string
-          poll_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          device_id: string
-          id?: string
-          label: string
-          poll_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          device_id?: string
-          id?: string
-          label?: string
-          poll_id?: string
-        }
-        Relationships: []
-      }
       poll_votes: {
         Row: {
           created_at: string
