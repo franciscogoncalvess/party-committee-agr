@@ -29,8 +29,18 @@ export default function PollCard({ poll }: PollProps) {
   const [voted, setVoted] = useState<string | null>(null);
   const [voteCounts, setVoteCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState(
+    [...(poll.poll_options ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+  );
 
-  const options = [...(poll.poll_options ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const fetchOptions = useCallback(async () => {
+    const { data } = await supabase
+      .from("poll_options")
+      .select("id, label, sort_order, description")
+      .eq("poll_id", poll.id)
+      .order("sort_order", { ascending: true });
+    if (data) setOptions(data as any);
+  }, [poll.id]);
 
   const fetchVotes = useCallback(async () => {
     const { data } = await supabase
@@ -58,9 +68,12 @@ export default function PollCard({ poll }: PollProps) {
       .on("postgres_changes", { event: "*", schema: "public", table: "poll_votes", filter: `poll_id=eq.${poll.id}` }, () => {
         fetchVotes();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_options", filter: `poll_id=eq.${poll.id}` }, () => {
+        fetchOptions();
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [fetchVotes, poll.id]);
+  }, [fetchVotes, fetchOptions, poll.id]);
 
   const endsDate = new Date(poll.ends_at);
   const isOpen = endsDate > new Date();
