@@ -183,94 +183,69 @@ export default function PollCard({ poll }: PollProps) {
         </button>
       )}
 
-      <SuggestionsSection pollId={poll.id} deviceId={deviceId} isOpen={isOpen} />
+      <AddOptionSection pollId={poll.id} isOpen={isOpen} />
     </div>
   );
 }
 
-function SuggestionsSection({ pollId, deviceId, isOpen }: { pollId: string; deviceId: string; isOpen: boolean }) {
-  const [suggestions, setSuggestions] = useState<{ id: string; label: string; description: string; device_id: string }[]>([]);
+function AddOptionSection({ pollId, isOpen }: { pollId: string; isOpen: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchSuggestions = useCallback(async () => {
-    const { data } = await supabase
-      .from("poll_suggestions")
-      .select("id, label, description, device_id")
-      .eq("poll_id", pollId)
-      .order("created_at", { ascending: true });
-    if (data) setSuggestions(data as any);
-  }, [pollId]);
-
-  useEffect(() => {
-    fetchSuggestions();
-    const channel = supabase
-      .channel(`poll-suggestions-${pollId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "poll_suggestions", filter: `poll_id=eq.${pollId}` }, () => fetchSuggestions())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchSuggestions, pollId]);
+  if (!isOpen) return null;
 
   const handleSubmit = async () => {
     const trimmed = label.trim();
     if (!trimmed) return;
     if (trimmed.length > 120) { toast.error("Keep it under 120 characters"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("poll_suggestions").insert({
+    const { data: existing } = await supabase
+      .from("poll_options")
+      .select("sort_order")
+      .eq("poll_id", pollId)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+    const nextOrder = existing && existing.length > 0 ? (existing[0].sort_order ?? 0) + 1 : 0;
+    const { error } = await supabase.from("poll_options").insert({
       poll_id: pollId,
       label: trimmed,
       description: description.trim().slice(0, 280),
-      device_id: deviceId,
+      sort_order: nextOrder,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Idea submitted!");
+    toast.success("Option added!");
     setLabel(""); setDescription(""); setShowForm(false);
   };
 
   return (
-    <div className="mt-5 pt-4 border-t border-border/50">
-      <div className="flex items-center justify-between">
-        <h4 className="text-[12px] font-semibold flex items-center gap-1.5 text-muted-foreground">
-          <Lightbulb size={12} /> Ideas from the team {suggestions.length > 0 && <span className="text-muted-foreground/60">({suggestions.length})</span>}
-        </h4>
-        {isOpen && !showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-[11px] font-semibold text-primary hover:text-primary/80 flex items-center gap-1"
-          >
-            <Plus size={11} /> Suggest
-          </button>
-        )}
-      </div>
-
-      {suggestions.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
-          {suggestions.map((s) => (
-            <li key={s.id} className="rounded-lg bg-muted/40 px-3 py-2 text-[12px]">
-              <p className="font-medium">{s.label}</p>
-              {s.description && <p className="text-[11px] text-muted-foreground mt-0.5">{s.description}</p>}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {showForm && (
-        <div className="mt-3 space-y-2">
+    <div className="mt-4 pt-3 border-t border-border/50">
+      {!showForm ? (
+        <button
+          onClick={() => setShowForm(true)}
+          className="text-[12px] font-semibold text-primary hover:text-primary/80 flex items-center gap-1"
+        >
+          <Plus size={12} /> Add your own option
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Lightbulb size={11} /> New option
+          </p>
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             maxLength={120}
-            placeholder="Your idea"
+            placeholder="Option name"
             className="w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-[13px] focus:outline-none focus:border-primary/40"
           />
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={280}
-            placeholder="Why? (optional)"
+            placeholder="Description (optional)"
             rows={2}
             className="w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-[12px] focus:outline-none focus:border-primary/40 resize-none"
           />
@@ -280,7 +255,7 @@ function SuggestionsSection({ pollId, deviceId, isOpen }: { pollId: string; devi
               disabled={submitting || !label.trim()}
               className="text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
             >
-              {submitting ? "Sending…" : "Submit"}
+              {submitting ? "Adding…" : "Add to poll"}
             </button>
             <button
               onClick={() => { setShowForm(false); setLabel(""); setDescription(""); }}
@@ -290,10 +265,6 @@ function SuggestionsSection({ pollId, deviceId, isOpen }: { pollId: string; devi
             </button>
           </div>
         </div>
-      )}
-
-      {suggestions.length === 0 && !showForm && (
-        <p className="text-[11px] text-muted-foreground/60 mt-1.5">Got a better option? Share it!</p>
       )}
     </div>
   );
